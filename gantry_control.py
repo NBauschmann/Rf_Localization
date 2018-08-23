@@ -580,15 +580,18 @@ class GantryControl(object):
 
         meas_description = hc_tools.write_descrition()
 
-        self.start_RfEar()
-        freqtx, numtx, tx_abs_pos = self.__oRf.get_txparams()
-        print(freqtx)
-        print(numtx)
-        print(tx_abs_pos)
 
-        self.process_measurement_sequence(wplist_filename, measdata_filename, numtx, tx_abs_pos, freqtx, meas_description)
+        #self.start_RfEar()
+        #freqtx, numtx, tx_abs_pos = self.__oRf.get_txparams()
+        #print(freqtx)
+        #print(numtx)
+        #print(tx_abs_pos)
 
-    def process_measurement_sequence(self, wplist_filename, measdata_filename, numtx, tx_abs_pos, freqtx, meas_description):
+        #meas_description gehoert ans ende
+        self.process_measurement_sequence(wplist_filename, measdata_filename, meas_description)#numtx, tx_abs_pos, freqtx, meas_description)
+
+    def process_measurement_sequence(self, wplist_filename, measdata_filename, meas_description): #numtx, tx_abs_pos, freqtx, meas_description):
+
         """
         :return:
         """
@@ -664,6 +667,8 @@ class GantryControl(object):
             # write header to measurement file
             file_description = 'Measurement file\n' + 'Measurement was taken on ' + t.ctime() + '\n' + 'Description: ' + meas_description + '\n'
 
+            """
+
             txdata = str(numtx) + ' '
             for itx in range(numtx):
                 txpos = tx_abs_pos[itx]
@@ -672,16 +677,16 @@ class GantryControl(object):
                 txdata += str(freqtx[itx]) + ' '
 
             print('txdata = ' + txdata)
-
+            """
             measfile.write(file_description)
             measfile.write('### begin grid settings\n')
             measfile.write(str(x0[0]) + ' ' + str(x0[1]) + ' ' + str(x0[2]) + ' ' +
                            str(xn[0]) + ' ' + str(xn[1]) + ' ' + str(xn[2]) + ' ' +
                            str(grid_dxdyda[0]) + ' ' + str(grid_dxdyda[1]) + ' ' + str(grid_dxdyda[2]) + ' ' +
-                           str(timemeas) + ' ' + txdata +
+                           str(timemeas) +       # ' ' + txdata +
                            '\n')
             measfile.write('### begin measurement data\n')
-
+            """
             # setup plot
             fig = plt.figure()
             # plt.ion()
@@ -700,78 +705,11 @@ class GantryControl(object):
                 txpos_single = tx_abs_pos[i]
                 ax.scatter(txpos_single[0], txpos_single[1],  txpos_single[2], c='red')
             ax.draw
-
+            """
             totnumofwp = np.shape(wp_data_mat)
 
             totnumofwp = totnumofwp[0]
             print ('Number of waypoints = ' + str(totnumofwp) + '\n')
-
-            z_meas = [0.0, 25.0, 50.0, 75.0, 100.0, 150.0, 200.0, 250.0, 300.0]
-            import Tkinter
-            import tkMessageBox
-
-            for z in z_meas:
-                tkMessageBox.showinfo("Information", "Schicht ist fertig gemessen. Bitte Z-Achse auf " + str(z) + "mm stellen und bestaetigen...")
-
-                # loop over all way-points
-                for row in wp_data_mat:
-
-                    numwp = int(row[0])
-                    new_target_wpx = row[1]
-                    new_target_wpy = row[2]
-                    new_target_wpz = row[3]
-                    new_target_wp = [new_target_wpx, new_target_wpy, new_target_wpz]  # find a solution for this ugly workaround...
-                    meastime = row[4]
-
-                    # estimate time left for plot title
-                    if numwp == 0:
-                        starttime = float(t.time())
-                        t_left_h = 0
-                        t_left_m = 0
-                        t_left_s = 0
-                    else:
-                        time_per_point = (float(t.time()) - starttime) / (numwp + 1)  # as numwp starts at 0
-                        time_left_sec = time_per_point * (totnumofwp-numwp+1)
-                        m, t_left_s = divmod(time_left_sec, 60)
-                        t_left_h, t_left_m = divmod(m, 60)
-
-                    if self.transmit_wp_to_gantry(new_target_wp):
-                        if self.move_gantry_to_target():
-                            if self.confirm_arrived_at_target_wp():
-                                t.sleep(.25)  # wait to damp motion/oscillation of antenna etc
-
-                                print('START Measurement for ' + str(meastime) + 's')
-                                print('Measuring at Way-Point #' + str(numwp) + ' of ' + str(totnumofwp) + ' way-points')
-                                ax.scatter(new_target_wp[0], new_target_wp[1], zs=new_target_wp[2], c='gold')
-                                temp_meas_title = 'Way-Point #' + str(numwp) + ' of ' + str(totnumofwp) + ' way-points ' +'- Time left: %d:%02d:%02d' % (t_left_h, t_left_m, t_left_s)
-                                ax.set_title(temp_meas_title, loc='left')
-                                # dataseq = self.__oCal.take_measurement(meastime)
-                                dataseq = self.__oRf.take_measurement(meastime)
-
-                                [nummeas, numtx] = np.shape(dataseq)
-
-                                # way point data - structure 'wp_x, wp_y, wp_a, num_wp, num_tx, num_meas'
-                                # str_base_data = str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(numtx) + ' ' + str(nummeas) + ' '
-
-                                str_base_data = str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(z) + ' ' + str(numwp) + ' ' + str(numtx) + ' ' + str(nummeas) + ' '
-
-                                # freq data
-                                str_freqs = ' '.join(map(str, freqtx)) + ' '
-
-                                # rss data - str_rss structure: 'ftx1.1, ftx1.2, [..] ,ftx1.n, ftx2.1, ftx2.2, [..], ftx2.n
-                                # print('data ' + str(dataseq))
-                                str_rss = ''
-                                #print(dataseq)
-                                for i in range(numtx):
-                                    str_rss = str_rss + ' '.join(map(str, np.matrix.round(dataseq[:, i], decimals=3))) + ' '
-
-                                measfile.write(str_base_data + str_freqs + str_rss + '\n')
-                                # print(str_base_data + str_freqs + str_rss)
-
-                        else:
-                            print ('Error: Failed to move gantry to new way-point!')
-                            print ('Way-point #' + str(numwp) + ' @ position x= ' + str(new_target_wp[0]) + ', y= '
-                                   + str(new_target_wp[1])) + ' @ position z= ' + str(new_target_wp[2])
 
             # loop over all way-points
             for row in wp_data_mat:
@@ -798,18 +736,15 @@ class GantryControl(object):
                 if self.transmit_wp_to_gantry(new_target_wp):
                     if self.move_gantry_to_target():
                         if self.confirm_arrived_at_target_wp():
-                            t.sleep(.25)  # wait to damp motion/oscillation of antenna etc
+                            t.sleep(.5)  # wait to damp motion/oscillation of antenna etc
 
                             print('START Measurement for ' + str(meastime) + 's')
-                            print('Measuring at Way-Point #' + str(numwp+1) + ' of ' + str(totnumofwp) + ' way-points')
-                            ax.scatter(new_target_wp[0], new_target_wp[1], zs=new_target_wp[2], c='gold')
-                            temp_meas_title = 'Way-Point #' + str(numwp) + ' of ' + str(totnumofwp) + ' way-points ' +'- Time left: %d:%02d:%02d' % (t_left_h, t_left_m, t_left_s)
-                            ax.set_title(temp_meas_title, loc='left')
-                            # dataseq = self.__oCal.take_measurement(meastime)
-                            dataseq = self.__oRf.take_measurement(meastime)
+                            print('Measuring at Way-Point #' + str(numwp + 1) + ' of ' + str(totnumofwp) + ' way-points')
 
-                            [nummeas, numtx] = np.shape(dataseq)
+                            #dataseq = self.__oRf.take_measurement(meastime)
 
+                            #[nummeas, numtx] = np.shape(dataseq)
+                            """
                             # way point data - structure 'wp_x, wp_y, wp_a, num_wp, num_tx, num_meas'
                             str_base_data = str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(numtx) + ' ' + str(nummeas) + ' '
                             # freq data
@@ -823,13 +758,20 @@ class GantryControl(object):
                                 str_rss = str_rss + ' '.join(map(str, np.matrix.round(dataseq[:, i], decimals=3))) + ' '
 
                             measfile.write(str_base_data + str_freqs + str_rss + '\n')
-                            # print(str_base_data + str_freqs + str_rss)
+                            """
+
+                            with open('current_position.txt', 'w') as posfile:
+                                posfile.write(str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp))
+
+                            t.sleep(meastime)
 
                     else:
                         print ('Error: Failed to transmit new way-point to gantry!')
                         print ('Way-point #' + str(numwp) + ' @ position x= ' + str(new_target_wp[0]) + ', y= '
                                + str(new_target_wp[1])) + ' @ position z= ' + str(new_target_wp[2])
-                    plt.pause(0.001)
+                    #plt.pause(0.001)
+
+
                     print
             measfile.close()
 
@@ -839,6 +781,10 @@ class GantryControl(object):
 
         return True
 
+
+
+
+"""
     def start_RfEar(self, center_freq=434.2e6, freqspan=1e5):
         import rf
 
@@ -856,4 +802,4 @@ class GantryControl(object):
         self.__oRf.set_txparams(freq6tx, tx_6pos)
         return True
 
-
+"""
