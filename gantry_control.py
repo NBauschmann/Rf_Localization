@@ -686,7 +686,8 @@ class GantryControl(object):
                            str(timemeas) +       # ' ' + txdata +
                            '\n')
             measfile.write('### begin measurement data\n')
-            """
+            t.sleep(2)
+
             # setup plot
             fig = plt.figure()
             # plt.ion()
@@ -701,11 +702,9 @@ class GantryControl(object):
             # plt.xlim(x0[0]-10, xn[0]+100)  # bei Bedarf mit ax.___
             # plt.ylim(x0[1]-10, xn[1]+100)  # bei Bedarf mit ax.___
             # plt.grid()
-            for i in range(len(tx_abs_pos)):
-                txpos_single = tx_abs_pos[i]
-                ax.scatter(txpos_single[0], txpos_single[1],  txpos_single[2], c='red')
+
             ax.draw
-            """
+
             totnumofwp = np.shape(wp_data_mat)
 
             totnumofwp = totnumofwp[0]
@@ -736,7 +735,7 @@ class GantryControl(object):
                 if self.transmit_wp_to_gantry(new_target_wp):
                     if self.move_gantry_to_target():
                         if self.confirm_arrived_at_target_wp():
-                            t.sleep(.5)  # wait to damp motion/oscillation of antenna etc
+                            t.sleep(0.5)  # wait to damp motion/oscillation of antenna etc
 
                             print('START Measurement for ' + str(meastime) + 's')
                             print('Measuring at Way-Point #' + str(numwp + 1) + ' of ' + str(totnumofwp) + ' way-points')
@@ -761,7 +760,7 @@ class GantryControl(object):
                             """
 
                             with open('current_position.txt', 'w') as posfile:
-                                posfile.write(str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp))
+                                posfile.write(str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(1))
 
                             t.sleep(meastime)
 
@@ -772,8 +771,10 @@ class GantryControl(object):
                     #plt.pause(0.001)
 
 
-                    print
             measfile.close()
+
+            with open('current_position.txt', 'w') as posfile:
+                posfile.write(str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(0))
 
             self.__oScX.close_port()
             self.__oScY.close_port()
