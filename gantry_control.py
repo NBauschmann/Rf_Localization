@@ -687,98 +687,96 @@ class GantryControl(object):
                            '\n')
             measfile.write('### begin measurement data\n')
             t.sleep(2)
-
-            # setup plot
-            fig = plt.figure()
-            # plt.ion()
-            ax = fig.add_subplot(111, projection='3d')
-            ax.plot(wp_data_mat[:, 1], wp_data_mat[:, 2], wp_data_mat[:, 3], 'b.-')
-            ax.set_xlabel('Distance in mm (belt-drive)')
-            ax.set_ylabel('Distance in mm (spindle-drive)')
-            ax.set_zlabel('Distance in mm (rod-drive)')
-            ax.set_xlim(-100, 3100)
-            ax.set_ylim(-100, 1800)
-            ax.set_zlim(-10, 1000)
-            # plt.xlim(x0[0]-10, xn[0]+100)  # bei Bedarf mit ax.___
-            # plt.ylim(x0[1]-10, xn[1]+100)  # bei Bedarf mit ax.___
-            # plt.grid()
-
-            ax.draw
-
-            totnumofwp = np.shape(wp_data_mat)
-
-            totnumofwp = totnumofwp[0]
-            print ('Number of waypoints = ' + str(totnumofwp) + '\n')
-
-            # loop over all way-points
-            for row in wp_data_mat:
-
-                numwp = int(row[0])
-                new_target_wpx = row[1]
-                new_target_wpy = row[2]
-                new_target_wpz = row[3]
-                new_target_wp = [new_target_wpx, new_target_wpy, new_target_wpz]  # find a solution for this ugly workaround...
-                meastime = row[4]
-
-                # estimate time left for plot title
-                if numwp == 0:
-                    starttime = float(t.time())
-                    t_left_h = 0
-                    t_left_m = 0
-                    t_left_s = 0
-                else:
-                    time_per_point = (float(t.time()) - starttime) / (numwp + 1)  # as numwp starts at 0
-                    time_left_sec = time_per_point * (totnumofwp-numwp+1)
-                    m, t_left_s = divmod(time_left_sec, 60)
-                    t_left_h, t_left_m = divmod(m, 60)
-
-                if self.transmit_wp_to_gantry(new_target_wp):
-                    if self.move_gantry_to_target():
-                        if self.confirm_arrived_at_target_wp():
-                            t.sleep(0.5)  # wait to damp motion/oscillation of antenna etc
-
-                            print('START Measurement for ' + str(meastime) + 's')
-                            print('Measuring at Way-Point #' + str(numwp + 1) + ' of ' + str(totnumofwp) + ' way-points')
-
-                            #dataseq = self.__oRf.take_measurement(meastime)
-
-                            #[nummeas, numtx] = np.shape(dataseq)
-                            """
-                            # way point data - structure 'wp_x, wp_y, wp_a, num_wp, num_tx, num_meas'
-                            str_base_data = str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(numtx) + ' ' + str(nummeas) + ' '
-                            # freq data
-                            str_freqs = ' '.join(map(str, freqtx)) + ' '
-
-                            # rss data - str_rss structure: 'ftx1.1, ftx1.2, [..] ,ftx1.n, ftx2.1, ftx2.2, [..], ftx2.n
-                            # print('data ' + str(dataseq))
-                            str_rss = ''
-                            #print(dataseq)
-                            for i in range(numtx):
-                                str_rss = str_rss + ' '.join(map(str, np.matrix.round(dataseq[:, i], decimals=3))) + ' '
-
-                            measfile.write(str_base_data + str_freqs + str_rss + '\n')
-                            """
-
-                            with open('current_position.txt', 'w') as posfile:
-                                posfile.write(str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(1))
-
-                            t.sleep(meastime)
-
-                    else:
-                        print ('Error: Failed to transmit new way-point to gantry!')
-                        print ('Way-point #' + str(numwp) + ' @ position x= ' + str(new_target_wp[0]) + ', y= '
-                               + str(new_target_wp[1])) + ' @ position z= ' + str(new_target_wp[2])
-                    #plt.pause(0.001)
-
-
             measfile.close()
 
-            with open('current_position.txt', 'w') as posfile:
-                posfile.write(str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(0))
+        # setup plot
+        fig = plt.figure()
+        # plt.ion()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot(wp_data_mat[:, 1], wp_data_mat[:, 2], wp_data_mat[:, 3], 'b.-')
+        ax.set_xlabel('Distance in mm (belt-drive)')
+        ax.set_ylabel('Distance in mm (spindle-drive)')
+        ax.set_zlabel('Distance in mm (rod-drive)')
+        ax.set_xlim(-100, 3100)
+        ax.set_ylim(-100, 1800)
+        ax.set_zlim(-10, 1000)
+        # plt.xlim(x0[0]-10, xn[0]+100)  # bei Bedarf mit ax.___
+        # plt.ylim(x0[1]-10, xn[1]+100)  # bei Bedarf mit ax.___
+        # plt.grid()
 
-            self.__oScX.close_port()
-            self.__oScY.close_port()
-            self.__oScZ.close_port()
+        ax.draw
+
+        totnumofwp = np.shape(wp_data_mat)
+
+        totnumofwp = totnumofwp[0]
+        print ('Number of waypoints = ' + str(totnumofwp) + '\n')
+
+        # loop over all way-points
+        for row in wp_data_mat:
+
+            numwp = int(row[0])
+            new_target_wpx = row[1]
+            new_target_wpy = row[2]
+            new_target_wpz = row[3]
+            new_target_wp = [new_target_wpx, new_target_wpy, new_target_wpz]  # find a solution for this ugly workaround...
+            meastime = row[4]
+
+            # estimate time left for plot title
+            if numwp == 0:
+                starttime = float(t.time())
+                t_left_h = 0
+                t_left_m = 0
+                t_left_s = 0
+            else:
+                time_per_point = (float(t.time()) - starttime) / (numwp + 1)  # as numwp starts at 0
+                time_left_sec = time_per_point * (totnumofwp-numwp+1)
+                m, t_left_s = divmod(time_left_sec, 60)
+                t_left_h, t_left_m = divmod(m, 60)
+
+            if self.transmit_wp_to_gantry(new_target_wp):
+                if self.move_gantry_to_target():
+                    if self.confirm_arrived_at_target_wp():
+                        t.sleep(0.5)  # wait to damp motion/oscillation of antenna etc
+
+                        print('START Measurement for ' + str(meastime) + 's')
+                        print('Measuring at Way-Point #' + str(numwp + 1) + ' of ' + str(totnumofwp) + ' way-points')
+
+                        #dataseq = self.__oRf.take_measurement(meastime)
+
+                        #[nummeas, numtx] = np.shape(dataseq)
+                        """
+                        # way point data - structure 'wp_x, wp_y, wp_a, num_wp, num_tx, num_meas'
+                        str_base_data = str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(numtx) + ' ' + str(nummeas) + ' '
+                        # freq data
+                        str_freqs = ' '.join(map(str, freqtx)) + ' '
+
+                        # rss data - str_rss structure: 'ftx1.1, ftx1.2, [..] ,ftx1.n, ftx2.1, ftx2.2, [..], ftx2.n
+                        # print('data ' + str(dataseq))
+                        str_rss = ''
+                        #print(dataseq)
+                        for i in range(numtx):
+                            str_rss = str_rss + ' '.join(map(str, np.matrix.round(dataseq[:, i], decimals=3))) + ' '
+
+                        measfile.write(str_base_data + str_freqs + str_rss + '\n')
+                        """
+
+                        with open('current_position.txt', 'w') as posfile:
+                            posfile.write(str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(1))
+                        print('position saved to file: ' + str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(1))
+                        t.sleep(meastime)
+
+                else:
+                    print ('Error: Failed to transmit new way-point to gantry!')
+                    print ('Way-point #' + str(numwp) + ' @ position x= ' + str(new_target_wp[0]) + ', y= '
+                           + str(new_target_wp[1])) + ' @ position z= ' + str(new_target_wp[2])
+                #plt.pause(0.001)
+
+        with open('current_position.txt', 'w') as posfile:
+            posfile.write(str(new_target_wp[0]) + ' ' + str(new_target_wp[1]) + ' ' + str(new_target_wp[2]) + ' ' + str(numwp) + ' ' + str(0))
+
+        self.__oScX.close_port()
+        self.__oScY.close_port()
+        self.__oScZ.close_port()
 
         return True
 

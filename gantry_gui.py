@@ -279,13 +279,13 @@ class StartPage(Tk.Frame):
         button1 = ttk.Button(self, text='Drive Settings', command=lambda: controller.show_frame(PageOne))
         button1.grid(row=15, column=1)
 
-        button_start_field_meas = ttk.Button(self, text='Start EM-Field Measurement', command=lambda: self.__gt.start_field_measurement_file_select())
+        button_start_field_meas = ttk.Button(self, text='Start Measurement', command=lambda: self.__gt.start_field_measurement_file_select())
         button_start_field_meas.grid(row=8, column=3, sticky='W', pady=4)
 
-        entry_log_lin_analyze = ttk.Entry(self)
-        entry_log_lin_analyze.insert(0, 'log')
-        entry_log_lin_analyze.grid(row=9, column=4)
-        button_analyze_data = ttk.Button(self, text='Analyze Data', command=lambda: rf_tools.analyze_measdata_from_file(entry_log_lin_analyze.get(), analyze_tx=tx_2_analyse))
+        #entry_log_lin_analyze = ttk.Entry(self)
+        #entry_log_lin_analyze.insert(0, 'log')
+        #entry_log_lin_analyze.grid(row=9, column=4)
+        button_analyze_data = ttk.Button(self, text='Analyze Data', command=lambda: rf_tools.analyze_measdata_from_file( analyze_tx=tx_2_analyse)) #entry_log_lin_analyze.get(), analyze_tx=tx_2_analyse))
         button_analyze_data.grid(row=9, column=3, sticky='W', pady=4)
 
         button_home_seq = ttk.Button(self, text='Initialize Home Position', command=lambda: self.__gt.start_go_home_seq_xyz())
