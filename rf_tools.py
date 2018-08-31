@@ -151,7 +151,7 @@ def write_measfile_header(ofile, file_description, x0, xn, grid_dxdyda, timemeas
     return True
 
 
-def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean', b_onboard=False, measfilename='path'):#model_type='log', analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean', b_onboard=False, measfilename='path'):
+def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type='log', analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean', b_onboard=False, measfilename='path'):
     """
     """
 
@@ -167,11 +167,12 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean
         load_grid_settings = False
         load_measdata = False
         all_meas_data = []
-        # every_wp_list = []  # includes duplicates of wps because of several measurements per wp
-        # wp_list = []  # doesn't include duplicates of wps -> better for plotting
+        every_wp_list = []  # includes duplicates of wps because of several measurements per wp
+        wp_list = []  # doesn't include duplicates of wps -> better for plotting
 
         # num_meas_per_wp = 5  # change this if more or less than 5 measurements per waypoint saved.
         plotdata_mat_list = []
+        previous_meas = []  # previous measured tags to kick out duplicate measurements because no tag was detected
 
         for i, line in enumerate(measfile):
 
@@ -251,9 +252,11 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean
 
                 meas_data_line_list = []
 
+                # reading  waypoint data
                 meas_data_line_list.append([meas_data_line[0], meas_data_line[1], meas_data_line[2]])  # wp_x, wp_y, wp_z
                 meas_data_line_list.append([int(meas_data_line[3]), int(meas_data_line[4])])  # wp_num, meas_num of that wp
 
+                # reading tag data
                 if len(meas_data_line) > 5:
                     # print ('found at least one tag')
                     num_tags = (len(meas_data_line) - 5) / 8
@@ -266,14 +269,18 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean
                         for index in range(8*t, 8*(t + 1)):
                             meas_tag_list.append(meas_data_line[5 + index])
 
-                        meas_all_tags_list.append(meas_tag_list)  # use this one and meas_data_line_list.append(meas_all_tags_list) to have all tags in list in data_line_list
-                        #meas_data_line_list.append(meas_tag_list)
+                        meas_all_tags_list.append(meas_tag_list)
 
-                    meas_data_line_list.append(meas_all_tags_list)
+                    if meas_all_tags_list == previous_meas:
+                        # either delete or simply don't append to meas_data_line_list
+                        pass
+                    else:
+                        meas_data_line_list.append(meas_all_tags_list)
 
-                # print meas_data_line_list
+                    previous_meas = meas_all_tags_list
+
+                print meas_data_line_list
                 all_meas_data.append(meas_data_line_list)
-
 
         print all_meas_data
 
@@ -312,8 +319,8 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean
         else:
             num_seen_tags = 0
 
-        print ('Waypoint, Number of measurement at waypoint: ' + str(all_meas_data[line][1]))
-        print ('seen tags: ' + str(num_seen_tags))
+        #print ('Waypoint, Number of measurement at waypoint: ' + str(all_meas_data[line][1]))
+        #print ('seen tags: ' + str(num_seen_tags))
 
         for tag in range(num_seen_tags):
             tag_id = all_meas_data[line][2][tag][0]
@@ -321,8 +328,8 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean
             y_meas = float(tags[int(tag_id)][1]) - float(all_meas_data[line][2][tag][1] * 1000)
             z_meas = 0
 
-            print all_meas_data[line][0]
-            print x_meas, y_meas, z_meas
+            #print all_meas_data[line][0]
+            #print x_meas, y_meas, z_meas
 
 
 
