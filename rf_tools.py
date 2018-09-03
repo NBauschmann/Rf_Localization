@@ -7,9 +7,10 @@ from scipy.optimize import curve_fit
 from scipy.special import lambertw
 import socket
 
-
 import hippocampus_toolbox as hc_tools
 
+from pyquaternion import Quaternion
+import tag_class as tc
 
 """
 independent methods related to the gantry
@@ -152,20 +153,49 @@ def write_measfile_header(ofile, file_description, x0, xn, grid_dxdyda, timemeas
 
 
 def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type='log', analyze_tx=[1, 2, 3, 4, 5, 6],  meantype='db_mean', b_onboard=False, measfilename='path'):
-    """
-    """
+    """"""
+    """Orientations of Tags"""
+    # calculating quaternion for wall 1 (windows)
+    tag_w1_orientation_1 = Quaternion(axis=(0, 0, 1.0), degrees=90)
+    tag_w1_orientation_2 = Quaternion(axis=(1.0, 0, 0), degrees=90)
+    tag_w1_orientation = tag_w1_orientation_1 * tag_w1_orientation_2
 
-    tags = [[0, 0, 0], [3820, 445, 0], [3820, 1390, 0], [3650, 1830, 0]]
+    # calculating quaternion for wall 2 (wave tank)
+    rotation_w2 = np.array([[-1.0, 0, 0], [0, 0, 1.0], [0, 1.0, 0]])
+    tag_w2_orientation = Quaternion(matrix=rotation_w2)
+
+    # calculating quaternion for wall 3 (computers)
+    rotation_w3 = np.array([[0, 0, -1.0], [-1.0, 0, 0], [0, 1.0, 0]])
+    tag_w3_orientation = Quaternion(matrix=rotation_w3)
+
+    # calculating quaternion for wall 4 (stairs)
+    rotation_w4 = np.array([[1.0, 0, 0], [0, 0, -1.0], [0, 1.0, 0]])
+    tag_w4_orientation = Quaternion(matrix=rotation_w4)
+
+    # calculating quaternion for tag3:
+    tag_3_orientation_1 = Quaternion(axis=[0.0, 1.0, 0.0], degrees=45)
+    tag_3_orientation = tag_w1_orientation * tag_3_orientation_1
+
+    #"""
+    tag_0 = tc.Tag(0, np.array([0, 0, 0]), tag_w1_orientation)
+    tag_1 = tc.Tag(1, np.array([3820, 445, 0]), tag_w1_orientation)
+    tag_2 = tc.Tag(2, np.array([3820, 1390, 0]), tag_w1_orientation)
+    tag_3 = tc.Tag(3, np.array([3650, 1830, 0]), tag_3_orientation)
+
+    tags = [tag_0, tag_1, tag_2, tag_3]
+    #"""
+    #tags = [[0, 0, 0], [3820, 445, 0], [3820, 1390, 0], [3650, 1830, 0]]
+    offset_camera = [185.0, 100.0, 0]
 
     if b_onboard is True:
-        measdata_filename = measfilename
+        meas_data_filename = measfilename
     else:
-        measdata_filename = hc_tools.select_file()  # 123???todo
+        meas_data_filename = hc_tools.select_file()  # 123???todo
 
-    with open(measdata_filename, 'r') as measfile:
+    with open(meas_data_filename, 'r') as measfile:
         load_description = True
         load_grid_settings = False
-        load_measdata = False
+        load_meas_data = False
         all_meas_data = []
         every_wp_list = []  # includes duplicates of wps because of several measurements per wp
         wp_list = []  # doesn't include duplicates of wps -> better for plotting
@@ -180,23 +210,23 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
                 # print('griddata found')
                 load_description = False
                 load_grid_settings = True
-                load_measdata = False
+                load_meas_data = False
                 continue
             elif line == '### begin measurement data\n':
                 load_description = False
                 load_grid_settings = False
-                load_measdata = True
+                load_meas_data = True
                 # print('Measurement data found')
                 continue
             if load_description:
                 # print('file description')
                 print(line)
 
-            if load_grid_settings and not load_measdata:
+            if load_grid_settings and not load_meas_data:
 
                 grid_settings = map(float, line[:-2].split(' '))
-                x0 = [grid_settings[0], grid_settings[1], grid_settings[2]]
-                xn = [grid_settings[3], grid_settings[4], grid_settings[5]]
+                x0 = [grid_settings[0] + offset_camera[0], grid_settings[1] + offset_camera[1], grid_settings[2] + offset_camera[2]]
+                xn = [grid_settings[3] + offset_camera[0], grid_settings[4] + offset_camera[1], grid_settings[5] + offset_camera[2]]
                 grid_dxdyda = [grid_settings[6], grid_settings[7], grid_settings[8]]
                 timemeas = grid_settings[9]
 
@@ -211,7 +241,7 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
                 print('data shape  = ' + str(data_shape_file))
 
                 # print out
-                print('filename = ' + measdata_filename)
+                print('filename = ' + meas_data_filename)
                 print('num_of_gridpoints = ' + str(data_shape_file[0]*data_shape_file[1]))
                 print('x0 = ' + str(x0))
                 print('xn = ' + str(xn))
@@ -244,23 +274,23 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
                 wp_vecz = np.reshape(wp_matz, (len(zpos) * len(xpos) * len(ypos), 1))
 
                 wp_mat = np.append(wp_vecx, np.append(wp_vecy, wp_vecz, axis=1), axis=1)
+                print wp_mat
 
-            if load_measdata and not load_grid_settings:
+            if load_meas_data and not load_grid_settings:
                 #print('Reading meas_data...')
 
                 meas_data_line = map(float, line[:-2].split(' '))
 
                 meas_data_line_list = []
 
-                # reading  waypoint data
-                meas_data_line_list.append([meas_data_line[0], meas_data_line[1], meas_data_line[2]])  # wp_x, wp_y, wp_z
+                # reading waypoint data
+                meas_data_line_list.append([meas_data_line[0] + offset_camera[0], meas_data_line[1] + offset_camera[1], meas_data_line[2] + offset_camera[2]])  # wp_x, wp_y, wp_z
                 meas_data_line_list.append([int(meas_data_line[3]), int(meas_data_line[4])])  # wp_num, meas_num of that wp
 
                 # reading tag data
                 if len(meas_data_line) > 5:
                     # print ('found at least one tag')
                     num_tags = (len(meas_data_line) - 5) / 8
-                    # print num_tags
                     meas_all_tags_list = []
 
                     for t in range(num_tags):
@@ -270,23 +300,25 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
                             meas_tag_list.append(meas_data_line[5 + index])
 
                         meas_all_tags_list.append(meas_tag_list)
-
+                    # checking for exact duplicates of measurements (in that moment probably no tag seen
+                    # -> saving most recent measurement again)
                     if meas_all_tags_list == previous_meas:
-                        # either delete or simply don't append to meas_data_line_list
+                        # (either delete) or simply don't append to meas_data_line_list
+                        # todo: maybe better to actually delete them in file?
                         pass
                     else:
                         meas_data_line_list.append(meas_all_tags_list)
 
                     previous_meas = meas_all_tags_list
 
-                print meas_data_line_list
+                # print meas_data_line_list
                 all_meas_data.append(meas_data_line_list)
 
-        print all_meas_data
+        # print all_meas_data
 
     # measurement file closed
 
-    # 2D plot
+    # 3D plot
     fig = plt.figure(0)
     pos = 111
     ax = fig.add_subplot(pos, projection='3d')
@@ -313,6 +345,13 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
     for t in range(len(tags)):
         ax.scatter(tags[t][0], tags[t][1], tags[t][2], edgecolor='#cc0000', facecolor='#cc0000')
 
+    x_error_all = []
+    y_error_all = []
+
+    meas_positions_tag1 = []
+    meas_positions_tag2 = []
+    meas_positions_tag3 = []
+
     for line in range(len(all_meas_data)):
         if len(all_meas_data[line]) > 2:
             num_seen_tags = len(all_meas_data[line][2])
@@ -322,16 +361,55 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
         #print ('Waypoint, Number of measurement at waypoint: ' + str(all_meas_data[line][1]))
         #print ('seen tags: ' + str(num_seen_tags))
 
+        x_error_all_tags = []
+        y_error_all_tags = []
+
         for tag in range(num_seen_tags):
-            tag_id = all_meas_data[line][2][tag][0]
-            x_meas = float(tags[int(tag_id)][0]) - float(all_meas_data[line][2][tag][2] * 1000)        # todo change m to mm in measurement_node.py!
-            y_meas = float(tags[int(tag_id)][1]) - float(all_meas_data[line][2][tag][1] * 1000)
+
+            tag_id = int(all_meas_data[line][2][tag][0])
+            x_meas = float(tags[tag_id][0]) - (float(all_meas_data[line][2][tag][3] * 1000))   # todo: change m to mm in measurement_node.py!
+            y_meas = float(tags[tag_id][1]) - (float(all_meas_data[line][2][tag][1] * 1000))
             z_meas = 0
 
+            if tag_id == 1:
+                meas_positions_tag1.append([x_meas, y_meas, z_meas])
+
+            if tag_id == 2:
+                meas_positions_tag2.append([x_meas, y_meas, z_meas])
+
+            if tag_id == 3:
+                meas_positions_tag3.append([x_meas, y_meas, z_meas])
+
+            x_error = all_meas_data[line][0][0] - x_meas
+            y_error = all_meas_data[line][0][1] - y_meas
+
+            x_error_all_tags.append(x_error)
+            y_error_all_tags.append(y_error)
+
             #print all_meas_data[line][0]
-            #print x_meas, y_meas, z_meas
+            #print float(all_meas_data[line][2][tag][3] * 1000)
+            print tag_id, all_meas_data[line][0][0], all_meas_data[line][0][1], x_meas, y_meas, z_meas, x_error, y_error
 
+            x_error_all.append(x_error)
+            y_error_all.append(y_error)
 
+    print ('average error over all tags in x: ' + str(sum(x_error_all) / float(len(x_error_all))))
+    print ('average error over all tags in y: ' + str(sum(y_error_all) / float(len(y_error_all))))
+
+    xs_1 = [x[0] for x in meas_positions_tag1]
+    ys_1 = [x[1] for x in meas_positions_tag1]
+    zs_1 = [x[2] for x in meas_positions_tag1]
+    ax.plot(xs_1, ys_1, zs_1, '.')
+
+    xs_2 = [x[0] for x in meas_positions_tag2]
+    ys_2 = [x[1] for x in meas_positions_tag2]
+    zs_2 = [x[2] for x in meas_positions_tag2]
+    ax.plot(xs_2, ys_2, zs_2, '.')
+
+    xs_3 = [x[0] for x in meas_positions_tag3]
+    ys_3 = [x[1] for x in meas_positions_tag3]
+    zs_3 = [x[2] for x in meas_positions_tag3]
+    ax.plot(xs_3, ys_3, zs_3, '.')
 
     plt.show()
 
