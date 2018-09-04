@@ -21,14 +21,14 @@ class Tag(object):
     def get_orientation_wf(self):
         return self.__orientation_wf
 
-    def convert_location_to_absolute(self, quat_cam_tag_x, dist_cam_tag_x):
+    def convert_measurement_to_wf(self, quat_cam_tag_x, dist_cam_tag_x):
         dist_cam_tag_tf = quat_cam_tag_x.rotate(dist_cam_tag_x)
         dist_cam_tag_wf = self.__orientation_wf.rotate(dist_cam_tag_tf)
 
-        absolute_position = np.subtract(self.__position_wf, dist_cam_tag_wf)
-        return absolute_position
+        #absolute_position = np.subtract(self.__position_wf, dist_cam_tag_wf)
+        return dist_cam_tag_wf
     
-    def convert_orientation_to_absolute(self, quat_cam_tag_x):
+    def convert_orientation_to_wf(self, quat_cam_tag_x):
         """TO DO: check whether this is the right quaternion!!!"""
         
         absolute_orientation = quat_cam_tag_x * self.__orientation_wf
