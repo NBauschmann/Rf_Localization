@@ -29,9 +29,8 @@ class Tag(object):
         return dist_cam_tag_wf
     
     def convert_orientation_to_wf(self, quat_cam_tag_x):
-        """TO DO: check whether this is the right quaternion!!!"""
         
-        absolute_orientation = quat_cam_tag_x * self.__orientation_wf
+        absolute_orientation = self.__orientation_wf * quat_cam_tag_x  # should be right quaternion now
         return absolute_orientation
 
 

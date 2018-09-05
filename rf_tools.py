@@ -6,6 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy.optimize import curve_fit
 from scipy.special import lambertw
 import socket
+import math
 
 import hippocampus_toolbox as hc_tools
 
@@ -161,9 +162,9 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
     meas_type = 2: 3D measurement with unknown camera_orientation
                     -> 6D measurement, using measured quaternion to transform measured position in world frame
     """
-    meas_type = 0
+    meas_type = 2
 
-    cam_orientation = Quaternion(0.5, 0.5, 0.5, 0.5)   # set this if meas_3d = True
+    cam_orientation = Quaternion(0.5, 0.5, 0.5, 0.5)   # set this if meas_type = 1
 
     offset_camera = [185.0, 100.0, 0]
 
@@ -197,9 +198,10 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
     tag_w4_orientation = Quaternion(matrix=rotation_w4)
 
     # calculating quaternion for tag3:
-    tag_3_orientation_1 = Quaternion(axis=[0.0, 1.0, 0.0], degrees=45)
-    tag_3_orientation = tag_w1_orientation * tag_3_orientation_1  # todo: Warum macht Reihenfolge keinen Unterschied?!
+    tag_3_orientation_1 = Quaternion(axis=[0.0, 1.0, 0.0], degrees=-45)
+    tag_3_orientation = tag_w2_orientation * tag_3_orientation_1
 
+    print tag_3_orientation
     # todo: z-Werte ausmessen und eintragen, sonst macht 3d plot keinen sinn
     tag_0 = tc.Tag(0, np.array([0, 0, 0]), tag_w1_orientation)
     tag_1 = tc.Tag(1, np.array([3820, 445, 0]), tag_w1_orientation)
@@ -214,8 +216,6 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
 
     if meas_type == 2:
         tags = [tag_0, tag_1, tag_2, tag_3]
-
-
 
     if b_onboard is True:
         meas_data_filename = measfilename
@@ -392,6 +392,7 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
     meas_positions_tag3 = []
 
     for line in range(len(all_meas_data)):
+
         if len(all_meas_data[line]) > 2:
             num_seen_tags = len(all_meas_data[line][2])
         else:
@@ -405,8 +406,10 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
         z_error_all_tags = []
 
         for tag in range(num_seen_tags):
+
+            tag_id = int(all_meas_data[line][2][tag][0])
+
             if meas_type == 0:   # 2d plot und messung
-                tag_id = int(all_meas_data[line][2][tag][0])
                 x_meas = float(tags[tag_id][0]) - (float(all_meas_data[line][2][tag][3] * 1000))  # todo: change m to mm in measurement_node.py!
                 y_meas = float(tags[tag_id][1]) - (float(all_meas_data[line][2][tag][1] * 1000))
                 z_meas = 0
@@ -418,18 +421,16 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
 
                 if meas_type == 2:     # 3d measurement, unknown camera orientation
                     orientation_cam_tag = Quaternion(all_meas_data[line][2][tag][4:8])
-                    orientation_cam_wf = tags[tag].convert_orientation_to_wf(orientation_cam_tag)
-
-                    # print orientation_cam_tag
-                    # print orientation_cam_wf
+                    # orientation_cam_wf = tags[tag_id].get_orientation_wf() * orientation_cam_tag
+                    orientation_cam_wf = tags[tag_id].convert_orientation_to_wf(orientation_cam_tag)
+                    print orientation_cam_tag, tag_id
+                    print orientation_cam_wf
 
                     dist_cam_tag_cf = np.array(all_meas_data[line][2][tag][1:4])  # vector cam-tag in camera frame
                     # print dist_cam_tag_cf
 
-                    dist_cam_tag_wf = tags[tag].convert_measurement_to_wf(orientation_cam_tag, dist_cam_tag_cf)  # vector cam-tag in world frame
-                    # print dist_cam_tag_wf
+                    dist_cam_tag_wf = tags[tag_id].convert_measurement_to_wf(orientation_cam_tag, dist_cam_tag_cf)  # vector cam-tag in world frame
 
-                tag_id = int(all_meas_data[line][2][tag][0])
                 x_meas = float(tags[tag_id].get_position_wf()[0]) - (float(dist_cam_tag_wf[0] * 1000))  # todo: change m to mm in measurement_node.py!
                 y_meas = float(tags[tag_id].get_position_wf()[1]) - (float(dist_cam_tag_wf[1] * 1000))
                 z_meas = float(tags[tag_id].get_position_wf()[2]) - (float(dist_cam_tag_wf[2] * 1000))
@@ -443,9 +444,9 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
             if tag_id == 3:
                 meas_positions_tag3.append([x_meas, y_meas, z_meas])
 
-            x_error = all_meas_data[line][0][0] - x_meas
-            y_error = all_meas_data[line][0][1] - y_meas
-            z_error = all_meas_data[line][0][2] - z_meas
+            x_error = (all_meas_data[line][0][0] - x_meas) ** 2
+            y_error = (all_meas_data[line][0][1] - y_meas) ** 2
+            z_error = (all_meas_data[line][0][2] - z_meas) ** 2
 
             x_error_all_tags.append(x_error)
             y_error_all_tags.append(y_error)
@@ -459,9 +460,9 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
             y_error_all.append(y_error)
             z_error_all.append(z_error)
 
-    print ('average error over all tags in x: ' + str(sum(x_error_all) / float(len(x_error_all))))
-    print ('average error over all tags in y: ' + str(sum(y_error_all) / float(len(y_error_all))))
-    print ('average error over all tags in z: ' + str(sum(z_error_all) / float(len(z_error_all))))
+    print ('average error over all tags in x: ' + str(math.sqrt(sum(x_error_all) / float(len(x_error_all)))))
+    print ('average error over all tags in y: ' + str(math.sqrt(sum(y_error_all) / float(len(y_error_all)))))
+    print ('average error over all tags in z: ' + str(math.sqrt(sum(z_error_all) / float(len(z_error_all)))))
 
     xs_1 = [x[0] for x in meas_positions_tag1]
     ys_1 = [x[1] for x in meas_positions_tag1]
