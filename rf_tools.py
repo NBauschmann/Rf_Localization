@@ -163,8 +163,8 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
                     -> 6D measurement, using measured quaternion to transform measured position in world frame
     """
     meas_type = 2
-
-    cam_orientation = Quaternion(0.5, 0.5, 0.5, 0.5)   # set this if meas_type = 1
+    # set this if meas_type = 1
+    cam_orientation = Quaternion(0.5, 0.5, 0.5, 0.5)   # quaternion for camera facing wall with big windows
 
     offset_camera = [185.0, 100.0, 0]
 
@@ -173,7 +173,8 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
     rotation from world frame (wf) to tag frame (tf) according to wall 
 
     tag coordinate system: in tag center, x-axis pointing right, y-axis pointing down, z-axis pointing into tag
-
+    
+    #NEU MACHEN
     for wall closest to big windows (wall 1): q1 = 0.5 + 0.5i + 0.5j + 0.5k
     for wall closest to wave tank (wall 2): q2 = 0 + 0i +0.707107j + 0.707107k
     for wall closest to computers (wall 3): q3 = 0,5 + 0,5i - 0,5j - 0,5k 
@@ -201,7 +202,6 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
     tag_3_orientation_1 = Quaternion(axis=[0.0, 1.0, 0.0], degrees=-45)
     tag_3_orientation = tag_w2_orientation * tag_3_orientation_1
 
-    print tag_3_orientation
     # todo: z-Werte ausmessen und eintragen, sonst macht 3d plot keinen sinn
     tag_0 = tc.Tag(0, np.array([0, 0, 0]), tag_w1_orientation)
     tag_1 = tc.Tag(1, np.array([3820, 445, 0]), tag_w1_orientation)
@@ -222,7 +222,7 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
     else:
         meas_data_filename = hc_tools.select_file()  # 123???todo
 
-    with open(meas_data_filename, 'r') as measfile:
+    with open(meas_data_filename, 'r') as meas_file:
         load_description = True
         load_grid_settings = False
         load_meas_data = False
@@ -234,7 +234,7 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
         plotdata_mat_list = []
         previous_meas = []  # previous measured tags to kick out duplicate measurements because no tag was detected
 
-        for i, line in enumerate(measfile):
+        for i, line in enumerate(meas_file):
 
             if line == '### begin grid settings\n':
                 # print('griddata found')
@@ -411,7 +411,6 @@ def analyze_measdata_from_file(b_onboard=False, measfilename='path'):#model_type
 
         # print ('Waypoint, Number of measurement at waypoint: ' + str(all_meas_data[line][1]))
         # print ('seen tags: ' + str(num_seen_tags))
-
 
         for tag in range(num_seen_tags):
 
